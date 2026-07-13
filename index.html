@@ -325,11 +325,6 @@
     <div class="chart-wrapper">
       <canvas id="trendChart"></canvas>
     </div>
-    <div class="legend-row">
-      <div class="legend-item"><span class="legend-dot" style="background:#4f46e5"></span> 20以内加减法（50题）</div>
-      <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> 100以内不进退位（40题）</div>
-      <div class="legend-item"><span class="legend-dot" style="background:#10b981"></span> 总正确率（90题）</div>
-    </div>
   </div>
 
   <!-- 统计概览 -->
@@ -605,7 +600,7 @@ function renderChart(records) {
         intersect: false,
       },
       plugins: {
-        legend: { display: false },
+        legend: { display: true, position: 'bottom' },
         tooltip: {
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%`,
