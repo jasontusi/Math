@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暑假数学口算正确率趋势表</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 50%, #f0f4ff 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #1a1a2e;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+
+  /* 标题 */
+  .header {
+    text-align: center;
+    padding: 28px 20px 20px;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    border-radius: 16px;
+    color: #fff;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 24px rgba(79,70,229,0.25);
+  }
+  .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .header .subtitle { font-size: 13px; opacity: .85; }
+
+  /* 卡片 */
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* 录入表单 */
+  .form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 13px; font-weight: 600; color: #64748b; }
+  .form-group input, .form-group select {
+    padding: 8px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #1a1a2e;
+    transition: border-color .2s;
+    background: #f8fafc;
+    width: 140px;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #4f46e5;
+    background: #fff;
+  }
+
+  table.score-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+  }
+  table.score-table th {
+    background: #f8fafc;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    text-align: center;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  table.score-table td {
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 15px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  table.score-table .type-label { text-align: left; font-weight: 600; }
+  table.score-table input[type="number"] {
+    width: 72px;
+    padding: 6px 8px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 15px;
+    text-align: center;
+    background: #f8fafc;
+  }
+  table.score-table input[type="number"]:focus {
+    outline: none;
+    border-color: #4f46e5;
+    background: #fff;
+  }
+  .rate-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .rate-good { background: #ecfdf5; color: #059669; }
+  .rate-warn { background: #fffbeb; color: #d97706; }
+  .rate-bad  { background: #fef2f2; color: #dc2626; }
+
+  .row-total td { border-top: 2px solid #e2e8f0; font-weight: 700; }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: #4f46e5; color: #fff; }
+  .btn-primary:hover { background: #4338ca; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,.3); }
+  .btn-outline { background: #fff; color: #4f46e5; border: 1.5px solid #4f46e5; }
+  .btn-outline:hover { background: #f5f3ff; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+  .btn-danger { background: #fff; color: #dc2626; border: 1px solid #fecaca; }
+  .btn-danger:hover { background: #fef2f2; }
+
+  /* 图表 */
+  .chart-wrapper { position: relative; height: 300px; }
+  .legend-row {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #64748b;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  /* 统计卡片 */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .stat-item {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+  .stat-sub  { font-size: 12px; color: #94a3b8; }
+
+  .highlight-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .highlight-chip {
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .chip-up   { background: #ecfdf5; color: #059669; }
+  .chip-down { background: #fef2f2; color: #dc2626; }
+  .chip-flat { background: #f1f5f9; color: #64748b; }
+
+  /* 历史列表 */
+  .history-table { width: 100%; border-collapse: collapse; }
+  .history-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .history-table td {
+    padding: 10px 10px;
+    font-size: 14px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .history-table .bar-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mini-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: #e2e8f0;
+    flex: 1;
+    min-width: 40px;
+    overflow: hidden;
+  }
+  .mini-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .3s;
+  }
+  .bar-good { background: #10b981; }
+  .bar-warn { background: #f59e0b; }
+  .bar-bad  { background: #ef4444; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* footer */
+  .footer-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .card { padding: 16px; }
+    .header { padding: 20px 14px; }
+    .header h1 { font-size: 20px; }
+    table.score-table th, table.score-table td { padding: 8px 4px; font-size: 13px; }
+    .history-table { font-size: 12px; }
+    .history-table th, .history-table td { padding: 6px 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- 标题 -->
+  <div class="header">
+    <h1>📊 暑假数学口算正确率趋势表</h1>
+    <div class="subtitle">2026年暑假 · 7月 — 8月</div>
+  </div>
+
+  <!-- 今日记录 -->
+  <div class="card" id="inputCard">
+    <div class="card-title">📝 今日记录</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="recordDate">日期</label>
+        <input type="date" id="recordDate">
+      </div>
+      <div class="form-group" style="flex-direction:row;align-items:center;gap:6px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label>练习时长</label>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" id="durationMin" min="0" max="120" placeholder="0" style="width:64px">
+            <span style="font-size:13px;color:#64748b">分</span>
+            <input type="number" id="durationSec" min="0" max="59" placeholder="0" style="width:64px">
+            <span style="font-size:13px;color:#64748b">秒</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <table class="score-table">
+      <thead>
+        <tr>
+          <th style="text-align:left">题型</th>
+          <th>总题数</th>
+          <th>错题数</th>
+          <th>正确率</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="type-label">📐 20以内加减法</td>
+          <td>50</td>
+          <td><input type="number" id="wrong20" min="0" max="50" placeholder="如 2"></td>
+          <td><span class="rate-badge rate-good" id="rate20">--</span></td>
+        </tr>
+        <tr>
+          <td class="type-label">📏 100以内不进退位</td>
+          <td>40</td>
+          <td><input type="number" id="wrong100" min="0" max="40" placeholder="如 3"></td>
+          <td><span class="rate-badge rate-good" id="rate100">--</span></td>
+        </tr>
+        <tr class="row-total">
+          <td class="type-label">📌 合计</td>
+          <td>90</td>
+          <td id="totalWrong">--</td>
+          <td><span class="rate-badge rate-good" id="rateTotal">--</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnSave">💾 保存记录</button>
+      <button class="btn btn-outline" id="btnClearInput">✏️ 清空重填</button>
+    </div>
+  </div>
+
+  <!-- 正确率趋势图 -->
+  <div class="card">
+    <div class="card-title">📈 正确率趋势图</div>
+    <div class="chart-wrapper">
+      <canvas id="trendChart"></canvas>
+    </div>
+    <div class="legend-row">
+      <div class="legend-item"><span class="legend-dot" style="background:#4f46e5"></span> 20以内加减法（50题）</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> 100以内不进退位（40题）</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#10b981"></span> 总正确率（90题）</div>
+    </div>
+  </div>
+
+  <!-- 统计概览 -->
+  <div class="card">
+    <div class="card-title">📋 统计概览</div>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-item">
+        <div class="stat-label">📐 20以内 · 平均正确率</div>
+        <div class="stat-value" id="statAvg20">--</div>
+        <div class="stat-sub" id="statDays20">练习 0 天</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">📏 100以内 · 平均正确率</div>
+        <div class="stat-value" id="statAvg100">--</div>
+        <div class="stat-sub" id="statDays100">练习 0 天</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">📌 综合 · 平均正确率</div>
+        <div class="stat-value" id="statAvgTotal">--</div>
+        <div class="stat-sub" id="statDaysTotal">练习 0 天</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">🏆 综合 · 最佳正确率</div>
+        <div class="stat-value" id="statBestTotal">--</div>
+        <div class="stat-sub" id="statTotalQuestions">共 0 题</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">⏱️ 平均用时</div>
+        <div class="stat-value" id="statAvgDuration">--</div>
+        <div class="stat-sub" id="statDurationDays">有记录 0 天</div>
+      </div>
+    </div>
+    <div class="highlight-row" id="highlightRow"></div>
+  </div>
+
+  <!-- 历史记录 -->
+  <div class="card">
+    <div class="card-title">📜 历史记录</div>
+    <div id="historyContent"></div>
+  </div>
+
+  <!-- 底部操作 -->
+  <div class="footer-actions">
+    <button class="btn btn-outline btn-sm" id="btnExport">📥 导出 CSV</button>
+    <button class="btn btn-outline btn-sm" id="btnPrint">🖨️ 打印</button>
+    <button class="btn btn-danger btn-sm" id="btnReset">🔄 重置数据</button>
+  </div>
+
+</div>
+
+<script>
+// ===== 数据管理 =====
+const STORAGE_KEY = 'math-practice-records';
+const TOTAL_20 = 50;
+const TOTAL_100 = 40;
+const TOTAL_ALL = TOTAL_20 + TOTAL_100;
+
+function loadRecords() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+// ===== 工具函数 =====
+function calcRate(correct, total) {
+  if (total === 0) return 0;
+  return Math.round((correct / total) * 1000) / 10;
+}
+
+function rateClass(rate) {
+  if (rate >= 95) return 'rate-good';
+  if (rate >= 85) return 'rate-warn';
+  return 'rate-bad';
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function formatDuration(totalSec) {
+  if (!totalSec || totalSec <= 0) return '--';
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  if (m > 0 && s > 0) return `${m}分${s}秒`;
+  if (m > 0) return `${m}分`;
+  return `${s}秒`;
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ===== 实时正确率计算 =====
+function updateLiveRate() {
+  const w20 = parseInt(document.getElementById('wrong20').value) || 0;
+  const w100 = parseInt(document.getElementById('wrong100').value) || 0;
+  const c20 = TOTAL_20 - w20;
+  const c100 = TOTAL_100 - w100;
+
+  const r20 = calcRate(c20, TOTAL_20);
+  const r100 = calcRate(c100, TOTAL_100);
+  const rTotal = calcRate(c20 + c100, TOTAL_ALL);
+
+  const el20 = document.getElementById('rate20');
+  const el100 = document.getElementById('rate100');
+  const elTotal = document.getElementById('rateTotal');
+  const elTotalWrong = document.getElementById('totalWrong');
+
+  el20.textContent = c20 >= 0 ? r20 + '%' : '--';
+  el20.className = 'rate-badge ' + rateClass(r20);
+
+  el100.textContent = c100 >= 0 ? r100 + '%' : '--';
+  el100.className = 'rate-badge ' + rateClass(r100);
+
+  elTotalWrong.textContent = (w20 || 0) + (w100 || 0);
+  elTotal.textContent = rTotal + '%';
+  elTotal.className = 'rate-badge ' + rateClass(rTotal);
+}
+
+document.getElementById('wrong20').addEventListener('input', updateLiveRate);
+document.getElementById('wrong100').addEventListener('input', updateLiveRate);
+
+// 日期默认今天
+document.getElementById('recordDate').value = todayStr();
+
+// ===== 保存记录 =====
+document.getElementById('btnSave').addEventListener('click', () => {
+  const date = document.getElementById('recordDate').value;
+  const durMin = parseInt(document.getElementById('durationMin').value) || 0;
+  const durSec = parseInt(document.getElementById('durationSec').value) || 0;
+  const durationSec = durMin * 60 + durSec;
+  const wrong20 = parseInt(document.getElementById('wrong20').value);
+  const wrong100 = parseInt(document.getElementById('wrong100').value);
+
+  if (!date) { alert('请选择日期'); return; }
+  if (isNaN(wrong20) || wrong20 < 0 || wrong20 > TOTAL_20) {
+    alert(`20以内错题数需在 0-${TOTAL_20} 之间`); return;
+  }
+  if (isNaN(wrong100) || wrong100 < 0 || wrong100 > TOTAL_100) {
+    alert(`100以内错题数需在 0-${TOTAL_100} 之间`); return;
+  }
+
+  const correct20 = TOTAL_20 - wrong20;
+  const correct100 = TOTAL_100 - wrong100;
+
+  const records = loadRecords();
+  const idx = records.findIndex(r => r.date === date);
+
+  const record = { date, durationSec, correct20, correct100 };
+
+  if (idx >= 0) {
+    if (!confirm(`${date} 已有记录，是否覆盖？`)) return;
+    records[idx] = record;
+  } else {
+    records.push(record);
+  }
+
+  records.sort((a, b) => a.date.localeCompare(b.date));
+  saveRecords(records);
+
+  document.getElementById('wrong20').value = '';
+  document.getElementById('wrong100').value = '';
+  document.getElementById('durationMin').value = '';
+  document.getElementById('durationSec').value = '';
+  updateLiveRate();
+  refreshAll();
+});
+
+// 清空重填
+document.getElementById('btnClearInput').addEventListener('click', () => {
+  document.getElementById('wrong20').value = '';
+  document.getElementById('wrong100').value = '';
+  document.getElementById('durationMin').value = '';
+  document.getElementById('durationSec').value = '';
+  updateLiveRate();
+});
+
+// ===== 趋势图 =====
+let chartInstance = null;
+
+function renderChart(records) {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+
+  if (records.length === 0) {
+    chartInstance = null;
+    return;
+  }
+
+  // 生成从首条记录到今天的完整日期序列，缺失日记 0
+  const dateMap = {};
+  records.forEach(r => { dateMap[r.date] = r; });
+
+  const firstDate = new Date(records[0].date + 'T00:00:00');
+  const lastDate = new Date(Math.max(new Date(todayStr() + 'T00:00:00'), new Date(records[records.length - 1].date + 'T00:00:00')));
+
+  const allDates = [];
+  const cur = new Date(firstDate);
+  while (cur <= lastDate) {
+    const ds = cur.toISOString().slice(0, 10);
+    allDates.push(ds);
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const labels = allDates.map(d => formatDate(d));
+  const data20 = allDates.map(d => {
+    const r = dateMap[d];
+    return r ? calcRate(r.correct20, TOTAL_20) : 0;
+  });
+  const data100 = allDates.map(d => {
+    const r = dateMap[d];
+    return r ? calcRate(r.correct100, TOTAL_100) : 0;
+  });
+  const dataTotal = allDates.map(d => {
+    const r = dateMap[d];
+    return r ? calcRate(r.correct20 + r.correct100, TOTAL_ALL) : 0;
+  });
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '20以内加减法',
+          data: data20,
+          borderColor: '#4f46e5',
+          backgroundColor: 'rgba(79,70,229,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#4f46e5',
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: '100以内不进退位',
+          data: data100,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245,158,11,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#f59e0b',
+          borderDash: [6, 3],
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: '总正确率',
+          data: dataTotal,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#10b981',
+          borderDash: [2, 2],
+          tension: 0.3,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { callback: v => v + '%', stepSize: 20 },
+        },
+        x: {
+          ticks: { maxTicksLimit: 14 },
+        },
+      },
+    },
+  });
+}
+
+// ===== 统计概览 =====
+function renderStats(records) {
+  if (records.length === 0) {
+    document.getElementById('statAvg20').textContent = '--';
+    document.getElementById('statAvg100').textContent = '--';
+    document.getElementById('statAvgTotal').textContent = '--';
+    document.getElementById('statBestTotal').textContent = '--';
+    document.getElementById('statDays20').textContent = '练习 0 天';
+    document.getElementById('statDays100').textContent = '练习 0 天';
+    document.getElementById('statDaysTotal').textContent = '练习 0 天';
+    document.getElementById('statTotalQuestions').textContent = '共 0 题';
+    document.getElementById('statAvgDuration').textContent = '--';
+    document.getElementById('statDurationDays').textContent = '有记录 0 天';
+    document.getElementById('highlightRow').innerHTML = '';
+    return;
+  }
+
+  const days = records.length;
+  const totalQ20 = days * TOTAL_20;
+  const totalQ100 = days * TOTAL_100;
+  const totalQ = totalQ20 + totalQ100;
+
+  const avg20 = records.reduce((s, r) => s + calcRate(r.correct20, TOTAL_20), 0) / days;
+  const avg100 = records.reduce((s, r) => s + calcRate(r.correct100, TOTAL_100), 0) / days;
+
+  const allTotalRates = records.map(r => calcRate(r.correct20 + r.correct100, TOTAL_ALL));
+  const avgTotal = allTotalRates.reduce((s, v) => s + v, 0) / days;
+  const bestTotal = Math.max(...allTotalRates);
+
+  document.getElementById('statAvg20').textContent = avg20.toFixed(1) + '%';
+  document.getElementById('statAvg100').textContent = avg100.toFixed(1) + '%';
+  document.getElementById('statAvgTotal').textContent = avgTotal.toFixed(1) + '%';
+  document.getElementById('statBestTotal').textContent = bestTotal.toFixed(1) + '%';
+  document.getElementById('statDays20').textContent = `练习 ${days} 天`;
+  document.getElementById('statDays100').textContent = `练习 ${days} 天`;
+  document.getElementById('statDaysTotal').textContent = `练习 ${days} 天`;
+  document.getElementById('statTotalQuestions').textContent = `共 ${totalQ} 题`;
+
+  // 平均用时
+  const recordsWithDuration = records.filter(r => r.durationSec && r.durationSec > 0);
+  if (recordsWithDuration.length > 0) {
+    const avgSec = recordsWithDuration.reduce((s, r) => s + r.durationSec, 0) / recordsWithDuration.length;
+    document.getElementById('statAvgDuration').textContent = formatDuration(Math.round(avgSec));
+    document.getElementById('statDurationDays').textContent = `有记录 ${recordsWithDuration.length} 天`;
+  } else {
+    document.getElementById('statAvgDuration').textContent = '--';
+    document.getElementById('statDurationDays').textContent = `有记录 0 天`;
+  }
+
+  // 趋势判断
+  let trendHTML = '';
+  if (days >= 2) {
+    const recent = allTotalRates.slice(-3);
+    const first = recent[0];
+    const last = recent[recent.length - 1];
+    if (last > first) {
+      trendHTML += '<span class="highlight-chip chip-up">📈 近期趋势：上升 ↑</span> ';
+    } else if (last < first) {
+      trendHTML += '<span class="highlight-chip chip-down">📉 近期趋势：下降 ↓</span> ';
+    } else {
+      trendHTML += '<span class="highlight-chip chip-flat">📊 近期趋势：平稳 →</span> ';
+    }
+
+    // 连续进步天数
+    let streak = 1;
+    for (let i = days - 1; i > 0; i--) {
+      if (allTotalRates[i] >= allTotalRates[i - 1]) streak++;
+      else break;
+    }
+    if (streak >= 2) {
+      trendHTML += `<span class="highlight-chip chip-up">🏆 连续进步：${streak} 天</span>`;
+    }
+  }
+  document.getElementById('highlightRow').innerHTML = trendHTML;
+}
+
+// ===== 历史列表 =====
+function renderHistory(records) {
+  const container = document.getElementById('historyContent');
+
+  if (records.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div>还没有记录，在上方录入第一条吧！</div></div>';
+    return;
+  }
+
+  // 按日期倒序
+  const sorted = [...records].reverse();
+
+  let html = `
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>日期</th>
+          <th>20以内正确率</th>
+          <th>100以内正确率</th>
+          <th>总正确率</th>
+          <th>用时</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  sorted.forEach(r => {
+    const r20 = calcRate(r.correct20, TOTAL_20);
+    const r100 = calcRate(r.correct100, TOTAL_100);
+    const rTotal = calcRate(r.correct20 + r.correct100, TOTAL_ALL);
+
+    const isToday = r.date === todayStr();
+    const dateLabel = formatDate(r.date) + (isToday ? ' ✓' : '');
+
+    html += `
+      <tr>
+        <td>${dateLabel}</td>
+        <td>
+          <div class="bar-cell">
+            <span>${r.correct20}/${TOTAL_20}</span>
+            <div class="mini-bar"><div class="mini-bar-fill bar-good" style="width:${r20}%"></div></div>
+            <span style="font-weight:600;color:#059669">${r20}%</span>
+          </div>
+        </td>
+        <td>
+          <div class="bar-cell">
+            <span>${r.correct100}/${TOTAL_100}</span>
+            <div class="mini-bar"><div class="mini-bar-fill bar-good" style="width:${r100}%"></div></div>
+            <span style="font-weight:600;color:#059669">${r100}%</span>
+          </div>
+        </td>
+        <td><strong>${rTotal}%</strong></td>
+        <td>${formatDuration(r.durationSec)}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="editRecord('${r.date}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.date}')">🗑️</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ===== 编辑 / 删除 =====
+window.editRecord = function(date) {
+  const records = loadRecords();
+  const r = records.find(r => r.date === date);
+  if (!r) return;
+
+  document.getElementById('recordDate').value = r.date;
+  document.getElementById('wrong20').value = TOTAL_20 - r.correct20;
+  document.getElementById('wrong100').value = TOTAL_100 - r.correct100;
+  const totalSec = r.durationSec || 0;
+  document.getElementById('durationMin').value = Math.floor(totalSec / 60);
+  document.getElementById('durationSec').value = totalSec % 60;
+  updateLiveRate();
+
+  // 滚动到输入区
+  document.getElementById('inputCard').scrollIntoView({ behavior: 'smooth' });
+};
+
+window.deleteRecord = function(date) {
+  if (!confirm(`确定删除 ${date} 的记录吗？此操作不可撤销。`)) return;
+
+  let records = loadRecords();
+  records = records.filter(r => r.date !== date);
+  saveRecords(records);
+  refreshAll();
+};
+
+// ===== 导出 CSV =====
+document.getElementById('btnExport').addEventListener('click', () => {
+  const records = loadRecords();
+  if (records.length === 0) { alert('暂无数据可导出'); return; }
+
+  const header = '日期,20以内正确数,20以内正确率(%),100以内正确数,100以内正确率(%),总正确率(%),用时';
+  const rows = records.map(r => {
+    const r20 = calcRate(r.correct20, TOTAL_20);
+    const r100 = calcRate(r.correct100, TOTAL_100);
+    const rTotal = calcRate(r.correct20 + r.correct100, TOTAL_ALL);
+    const durStr = formatDuration(r.durationSec);
+    return `${r.date},${r.correct20},${r20},${r.correct100},${r100},${rTotal},${durStr}`;
+  });
+
+  const csv = '﻿' + header + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '暑假口算正确率统计.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ===== 打印 =====
+document.getElementById('btnPrint').addEventListener('click', () => {
+  window.print();
+});
+
+// ===== 重置 =====
+document.getElementById('btnReset').addEventListener('click', () => {
+  if (!confirm('确定要删除所有数据吗？此操作不可撤销！')) return;
+  if (!confirm('再次确认：真的要清空全部记录吗？')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  refreshAll();
+});
+
+// ===== 刷新所有视图 =====
+function refreshAll() {
+  const records = loadRecords();
+  renderChart(records);
+  renderStats(records);
+  renderHistory(records);
+}
+
+// ===== 初始加载 =====
+refreshAll();
+</script>
+</body>
+</html>
