@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>暑假数学口算正确率趋势表</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/g2plot/2.4.35/g2plot.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -323,7 +323,7 @@
   <div class="card">
     <div class="card-title">📈 正确率趋势图</div>
     <div class="chart-wrapper">
-      <canvas id="trendChart"></canvas>
+      <div id="trendChart" aria-label="正确率趋势图"></div>
     </div>
   </div>
 
@@ -513,7 +513,6 @@ document.getElementById('btnClearInput').addEventListener('click', () => {
 let chartInstance = null;
 
 function renderChart(records) {
-  const ctx = document.getElementById('trendChart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
 
   if (records.length === 0) {
@@ -536,89 +535,43 @@ function renderChart(records) {
     cur.setDate(cur.getDate() + 1);
   }
 
-  const labels = allDates.map(d => formatDate(d));
-  const data20 = allDates.map(d => {
+  const chartData = [];
+  allDates.forEach(d => {
     const r = dateMap[d];
-    return r ? calcRate(r.correct20, TOTAL_20) : 0;
-  });
-  const data100 = allDates.map(d => {
-    const r = dateMap[d];
-    return r ? calcRate(r.correct100, TOTAL_100) : 0;
-  });
-  const dataTotal = allDates.map(d => {
-    const r = dateMap[d];
-    return r ? calcRate(r.correct20 + r.correct100, TOTAL_ALL) : 0;
+    chartData.push(
+      { date: formatDate(d), rate: r ? calcRate(r.correct20, TOTAL_20) : 0, type: '20以内加减法' },
+      { date: formatDate(d), rate: r ? calcRate(r.correct100, TOTAL_100) : 0, type: '100以内不进退位' },
+      { date: formatDate(d), rate: r ? calcRate(r.correct20 + r.correct100, TOTAL_ALL) : 0, type: '总正确率' },
+    );
   });
 
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: '20以内加减法',
-          data: data20,
-          borderColor: '#4f46e5',
-          backgroundColor: 'rgba(79,70,229,0.08)',
-          borderWidth: 2.5,
-          pointRadius: 5,
-          pointBackgroundColor: '#4f46e5',
-          tension: 0.3,
-          fill: false,
-        },
-        {
-          label: '100以内不进退位',
-          data: data100,
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245,158,11,0.08)',
-          borderWidth: 2.5,
-          pointRadius: 5,
-          pointBackgroundColor: '#f59e0b',
-          borderDash: [6, 3],
-          tension: 0.3,
-          fill: false,
-        },
-        {
-          label: '总正确率',
-          data: dataTotal,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16,185,129,0.08)',
-          borderWidth: 2.5,
-          pointRadius: 5,
-          pointBackgroundColor: '#10b981',
-          borderDash: [2, 2],
-          tension: 0.3,
-          fill: false,
-        },
-      ],
+  chartInstance = new G2Plot.Line('trendChart', {
+    data: chartData,
+    xField: 'date',
+    yField: 'rate',
+    seriesField: 'type',
+    height: 300,
+    autoFit: true,
+    smooth: true,
+    color: ['#4f46e5', '#f59e0b', '#10b981'],
+    point: { size: 4, shape: 'circle' },
+    line: {
+      style: datum => ({
+        lineWidth: 2.5,
+        lineDash: datum.type === '100以内不进退位' ? [6, 3] : datum.type === '总正确率' ? [2, 2] : [],
+      }),
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: { display: true, position: 'bottom' },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%`,
-          },
-        },
-      },
-      scales: {
-        y: {
-          min: 0,
-          max: 100,
-          ticks: { callback: v => v + '%', stepSize: 20 },
-        },
-        x: {
-          ticks: { maxTicksLimit: 14 },
-        },
-      },
+    xAxis: { label: { autoRotate: false, autoHide: true } },
+    yAxis: {
+      min: 0,
+      max: 100,
+      tickCount: 6,
+      label: { formatter: value => `${value}%` },
     },
+    legend: { position: 'bottom' },
+    tooltip: { formatter: datum => ({ name: datum.type, value: `${datum.rate}%` }) },
   });
+  chartInstance.render();
 }
 
 // ===== 统计概览 =====
