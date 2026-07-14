@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>暑假数学口算正确率趋势表</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/@antv/g2/dist/g2.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -144,17 +144,6 @@
 
   /* 图表 */
   .chart-wrapper { position: relative; height: 300px; }
-  .legend-row {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    margin-top: 12px;
-    font-size: 13px;
-    color: #64748b;
-    flex-wrap: wrap;
-  }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
   /* 统计卡片 */
   .stats-grid {
@@ -323,12 +312,7 @@
   <div class="card">
     <div class="card-title">📈 正确率趋势图</div>
     <div class="chart-wrapper">
-      <canvas id="trendChart"></canvas>
-    </div>
-    <div class="legend-row">
-      <div class="legend-item"><span class="legend-dot" style="background:#4f46e5"></span> 20以内加减法（50题）</div>
-      <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> 100以内不进退位（40题）</div>
-      <div class="legend-item"><span class="legend-dot" style="background:#10b981"></span> 总正确率（90题）</div>
+      <div id="trendChart"></div>
     </div>
   </div>
 
@@ -518,7 +502,6 @@ document.getElementById('btnClearInput').addEventListener('click', () => {
 let chartInstance = null;
 
 function renderChart(records) {
-  const ctx = document.getElementById('trendChart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
 
   if (records.length === 0) {
@@ -555,75 +538,58 @@ function renderChart(records) {
     return r ? calcRate(r.correct20 + r.correct100, TOTAL_ALL) : 0;
   });
 
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: '20以内加减法',
-          data: data20,
-          borderColor: '#4f46e5',
-          backgroundColor: 'rgba(79,70,229,0.08)',
-          borderWidth: 2.5,
-          pointRadius: 5,
-          pointBackgroundColor: '#4f46e5',
-          tension: 0.3,
-          fill: false,
-        },
-        {
-          label: '100以内不进退位',
-          data: data100,
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245,158,11,0.08)',
-          borderWidth: 2.5,
-          pointRadius: 5,
-          pointBackgroundColor: '#f59e0b',
-          borderDash: [6, 3],
-          tension: 0.3,
-          fill: false,
-        },
-        {
-          label: '总正确率',
-          data: dataTotal,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16,185,129,0.08)',
-          borderWidth: 2.5,
-          pointRadius: 5,
-          pointBackgroundColor: '#10b981',
-          borderDash: [2, 2],
-          tension: 0.3,
-          fill: false,
-        },
-      ],
+  const series = [
+    { name: '20以内加减法（50题）', values: data20, color: '#4f46e5' },
+    { name: '100以内不进退位（40题）', values: data100, color: '#f59e0b' },
+    { name: '总正确率（90题）', values: dataTotal, color: '#10b981' },
+  ];
+  const chartData = series.flatMap(({ name, values }) =>
+    labels.map((date, index) => ({ date, rate: values[index], series: name }))
+  );
+
+  chartInstance = new G2.Chart({
+    container: 'trendChart',
+    autoFit: true,
+    height: 300,
+  });
+  chartInstance.options({
+    type: 'view',
+    data: chartData,
+    encode: { x: 'date', y: 'rate', color: 'series' },
+    scale: {
+      x: { domain: labels },
+      y: { domain: [0, 100], nice: false },
+      color: { domain: series.map(({ name }) => name), range: series.map(({ color }) => color) },
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%`,
+    axis: {
+      x: { labelAutoHide: true, labelAutoRotate: false },
+      y: { tickCount: 6, labelFormatter: value => `${value}%` },
+    },
+    legend: { color: { position: 'bottom' } },
+    interaction: { legendFilter: true, tooltip: { series: true } },
+    tooltip: { items: [{ channel: 'y', valueFormatter: value => `${value}%` }] },
+    children: [
+      {
+        type: 'line',
+        encode: { x: 'date', y: 'rate', color: 'series', shape: 'smooth' },
+        style: {
+          lineWidth: 2.5,
+          lineDash: datum => {
+            const name = Array.isArray(datum) ? datum[0]?.series : datum?.series;
+            if (name === '100以内不进退位（40题）') return [6, 3];
+            if (name === '总正确率（90题）') return [2, 2];
+            return [];
           },
         },
       },
-      scales: {
-        y: {
-          min: 0,
-          max: 100,
-          ticks: { callback: v => v + '%', stepSize: 20 },
-        },
-        x: {
-          ticks: { maxTicksLimit: 14 },
-        },
+      {
+        type: 'point',
+        encode: { x: 'date', y: 'rate', color: 'series' },
+        style: { r: 4 },
       },
-    },
+    ],
   });
+  chartInstance.render();
 }
 
 // ===== 统计概览 =====
