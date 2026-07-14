@@ -406,8 +406,8 @@ function rateClass(rate) {
 }
 
 function formatDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return `${m}/${d}`;
 }
 
 function formatDuration(totalSec) {
@@ -524,15 +524,18 @@ function renderChart(records) {
   const dateMap = {};
   records.forEach(r => { dateMap[r.date] = r; });
 
-  const firstDate = new Date(records[0].date + 'T00:00:00');
-  const lastDate = new Date(Math.max(new Date(todayStr() + 'T00:00:00'), new Date(records[records.length - 1].date + 'T00:00:00')));
+  const firstDate = records[0].date;
+  const today = todayStr();
+  const lastRecordDate = records[records.length - 1].date;
+  const lastDate = today > lastRecordDate ? today : lastRecordDate;
 
   const allDates = [];
-  const cur = new Date(firstDate);
+  let cur = firstDate;
   while (cur <= lastDate) {
-    const ds = cur.toISOString().slice(0, 10);
-    allDates.push(ds);
-    cur.setDate(cur.getDate() + 1);
+    allDates.push(cur);
+    const [y, m, d] = cur.split('-').map(Number);
+    const next = new Date(y, m - 1, d + 1);
+    cur = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
   }
 
   const chartData = [];
@@ -561,7 +564,7 @@ function renderChart(records) {
         lineDash: datum.type === '100以内不进退位' ? [6, 3] : datum.type === '总正确率' ? [2, 2] : [],
       }),
     },
-    xAxis: { label: { autoRotate: false, autoHide: true } },
+    xAxis: { label: { autoRotate: true, autoHide: false, autoEllipsis: true } },
     yAxis: {
       min: 0,
       max: 100,
