@@ -519,7 +519,8 @@ function renderChart(records) {
   const allDates = [];
   const cur = new Date(firstDate);
   while (cur <= lastDate) {
-    const ds = cur.toISOString().slice(0, 10);
+    // 使用本地日期生成键，避免中国时区下 toISOString 将日期提前一天
+    const ds = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
     allDates.push(ds);
     cur.setDate(cur.getDate() + 1);
   }
@@ -539,9 +540,9 @@ function renderChart(records) {
   });
 
   const series = [
-    { name: '20以内加减法（50题）', values: data20, color: '#4f46e5' },
-    { name: '100以内不进退位（40题）', values: data100, color: '#f59e0b' },
-    { name: '总正确率（90题）', values: dataTotal, color: '#10b981' },
+    { name: '20以内加减法正确率', values: data20, color: '#4f46e5' },
+    { name: '100以内不进退位加减法正确率', values: data100, color: '#f59e0b' },
+    { name: '总正确率', values: dataTotal, color: '#10b981' },
   ];
   const chartData = series.flatMap(({ name, values }) =>
     labels.map((date, index) => ({ date, rate: values[index], series: name }))
@@ -562,22 +563,44 @@ function renderChart(records) {
       color: { domain: series.map(({ name }) => name), range: series.map(({ color }) => color) },
     },
     axis: {
-      x: { labelAutoHide: true, labelAutoRotate: false },
-      y: { tickCount: 6, labelFormatter: value => `${value}%` },
+      x: { title: null, labelAutoHide: true, labelAutoRotate: false },
+      y: { title: null, tickCount: 6, labelFormatter: value => `${value}%` },
     },
     legend: { color: { position: 'bottom' } },
-    interaction: { legendFilter: true, tooltip: { series: true } },
-    tooltip: { items: [{ channel: 'y', valueFormatter: value => `${value}%` }] },
+    interaction: {
+      legendFilter: true,
+      tooltip: {
+        series: true,
+        render: (event, { items }) => {
+          const uniqueItems = items.filter((item, index, list) =>
+            list.findIndex(candidate => candidate.name === item.name) === index
+          );
+          return `<div>${uniqueItems.map(item => `
+            <div style="display:flex;align-items:center;gap:8px;line-height:22px">
+              <span style="color:${item.color || '#64748b'}">●</span>
+              <span>${item.name}</span>
+              <strong style="margin-left:auto">${item.value}</strong>
+            </div>`).join('')}</div>`;
+        },
+      },
+    },
     children: [
       {
         type: 'line',
         encode: { x: 'date', y: 'rate', color: 'series', shape: 'smooth' },
+        tooltip: {
+          title: false,
+          items: [datum => ({
+            name: datum.series,
+            value: `${datum.rate}%`,
+          })],
+        },
         style: {
           lineWidth: 2.5,
           lineDash: datum => {
             const name = Array.isArray(datum) ? datum[0]?.series : datum?.series;
-            if (name === '100以内不进退位（40题）') return [6, 3];
-            if (name === '总正确率（90题）') return [2, 2];
+            if (name === '100以内不进退位加减法正确率') return [6, 3];
+            if (name === '总正确率') return [2, 2];
             return [];
           },
         },
@@ -585,6 +608,7 @@ function renderChart(records) {
       {
         type: 'point',
         encode: { x: 'date', y: 'rate', color: 'series' },
+        tooltip: false,
         style: { r: 4 },
       },
     ],
